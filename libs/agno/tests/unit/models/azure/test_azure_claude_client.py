@@ -148,6 +148,7 @@ class TestEnvVarFallbacks:
 class TestClientParams:
     def test_api_key_auth(self, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_FOUNDRY_API_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_FOUNDRY_BASE_URL", raising=False)
 
         model = AzureFoundryClaude(
             id="claude-sonnet-4-5",
@@ -217,6 +218,7 @@ class TestClientParams:
     def test_explicit_params_override_env(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_FOUNDRY_API_KEY", "env-key")
         monkeypatch.setenv("ANTHROPIC_FOUNDRY_RESOURCE", "env-resource")
+        monkeypatch.delenv("ANTHROPIC_FOUNDRY_BASE_URL", raising=False)
 
         model = AzureFoundryClaude(
             id="claude-sonnet-4-5",

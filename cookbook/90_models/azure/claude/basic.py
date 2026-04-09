@@ -18,7 +18,7 @@ from agno.models.azure.claude import Claude
 # Create Agent
 # ---------------------------------------------------------------------------
 
-agent = Agent(model=Claude(id="claude-sonnet-4-5"), markdown=True)
+agent = Agent(model=Claude(id="claude-sonnet-4-6"), markdown=True)
 
 # String syntax alternative:
 # agent = Agent(model="azure-foundry-claude:claude-sonnet-4-5", markdown=True)

@@ -6,6 +6,7 @@ import httpx
 from pydantic import BaseModel
 
 from agno.models.anthropic import Claude as AnthropicClaude
+from agno.models.message import Message
 from agno.utils.http import get_default_async_client, get_default_sync_client
 from agno.utils.log import log_debug, log_warning
 from agno.utils.models.claude import format_tools_for_model
@@ -157,6 +158,7 @@ class Claude(AnthropicClaude):
         system_message: str,
         tools: list[Dict[str, Any]] | None = None,
         response_format: Union[Dict, Type[BaseModel]] | None = None,
+        messages: list[Message] | None = None,
     ) -> Dict[str, Any]:
         """Prepare the request keyword arguments for the API call."""
         request_kwargs = self.get_request_params(response_format=response_format, tools=tools).copy()

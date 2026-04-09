@@ -14,7 +14,7 @@ from agno.models.azure.claude import Claude
 
 agent = Agent(
     model=Claude(
-        id="claude-sonnet-4-5",
+        id="claude-sonnet-4-6",
         max_tokens=2048,
         thinking={"type": "enabled", "budget_tokens": 1024},
     ),
