@@ -63,7 +63,6 @@ from agno.team import (
 )
 from agno.team.mode import TeamMode
 from agno.tools import Toolkit
-from agno.tools.discoverable import DiscoverableTools
 from agno.tools.function import Function
 from agno.utils.log import (
     log_error,
@@ -245,10 +244,6 @@ class Team:
     # --- Skills ---
     # Skills provide additional instructions, references, and scripts to the team leader.
     skills: Optional[Skills] = None
-
-    # --- Discoverable Tools ---
-    # Tools withheld from context until discovered via search_tools meta-tool.
-    discoverable_tools: Optional[DiscoverableTools] = None
 
     # --- Team Tools ---
     # A list of tools provided to the Model.
@@ -500,7 +495,6 @@ class Team:
         num_history_messages: Optional[int] = None,
         max_tool_calls_from_history: Optional[int] = None,
         skills: Optional[Skills] = None,
-        discoverable_tools: Optional[DiscoverableTools] = None,
         tools: Optional[Union[List[Union[Toolkit, Callable, Function, Dict]], Callable[..., List]]] = None,
         tool_call_limit: Optional[int] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
@@ -623,7 +617,6 @@ class Team:
             num_history_messages=num_history_messages,
             max_tool_calls_from_history=max_tool_calls_from_history,
             skills=skills,
-            discoverable_tools=discoverable_tools,
             tools=tools,
             tool_call_limit=tool_call_limit,
             tool_choice=tool_choice,

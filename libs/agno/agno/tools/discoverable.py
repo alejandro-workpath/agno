@@ -8,12 +8,16 @@ from agno.tools.toolkit import Toolkit
 from agno.utils.log import log_debug, log_warning
 
 
-class DiscoverableTools:
+class DiscoverableTools(Toolkit):
     """Pool of tools withheld from the model's context until discovered via search.
 
-    Exposes a single ``search_tools`` meta-Function. When called, matching tools
-    are appended to the model's active tools list and become callable as regular
-    Functions on subsequent iterations of the model loop.
+    Registers a single ``search_tools`` meta-Function. When called, matching tools
+    are appended to the live tools list and become callable as regular Functions
+    on subsequent iterations of the model loop.
+
+    Usage:
+        discoverable = DiscoverableTools(tools=[tool_a, tool_b, ...])
+        agent = Agent(tools=[always_visible_tool, discoverable])
     """
 
     def __init__(
@@ -43,50 +47,42 @@ class DiscoverableTools:
         self._audios: Optional[Sequence[Audio]] = None
         self._videos: Optional[Sequence[Video]] = None
         self._async_mode: bool = False
+
         self._build_registry(tools)
+
+        search_fn = Function(
+            name=self._search_tool_name,
+            description=(
+                "Search for additional tools by keyword query. "
+                "Returns matching tool names + descriptions and makes them "
+                "callable directly on subsequent turns. "
+                f"Returns up to {self._max_results} tools per call."
+            ),
+            entrypoint=self._search,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Keywords describing the tool capability you need.",
+                    }
+                },
+                "required": ["query"],
+            },
+        )
+
+        super().__init__(
+            name="discoverable_tools",
+            tools=[search_fn],
+            instructions=self._build_instructions(),
+            add_instructions=True,
+        )
 
     @property
     def _registry(self) -> Dict[str, Function]:
         return self._async_registry if self._async_mode else self._sync_registry
 
     # ------------------------------------------------------------------ public
-    def get_tools(self) -> List[Function]:
-        """Return the search_tools meta-Function. Resets per-run state."""
-        self._active_names.clear()
-        return [
-            Function(
-                name=self._search_tool_name,
-                description=(
-                    "Search for additional tools by keyword query. "
-                    "Returns matching tool names + descriptions and makes them "
-                    "callable directly on subsequent turns. "
-                    f"Returns up to {self._max_results} tools per call."
-                ),
-                entrypoint=self._search,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Keywords describing the tool capability you need.",
-                        }
-                    },
-                    "required": ["query"],
-                },
-            )
-        ]
-
-    def get_system_prompt_snippet(self) -> str:
-        if not self._registry:
-            return ""
-        return (
-            "<discoverable_tools>\n"
-            f"You have access to {len(self._registry)} additional tools not shown by default. "
-            f"Use `{self._search_tool_name}(query)` to find relevant ones by keyword. "
-            "Discovered tools become directly callable on the next turn — do not wrap them.\n"
-            "</discoverable_tools>"
-        )
-
     def bind(
         self,
         tools_list: List[Any],
@@ -117,6 +113,15 @@ class DiscoverableTools:
         self._active_names.clear()
 
     # ----------------------------------------------------------------- private
+    def _build_instructions(self) -> str:
+        if not self._sync_registry:
+            return ""
+        return (
+            f"You have access to {len(self._sync_registry)} additional tools not shown by default. "
+            f"Use `{self._search_tool_name}(query)` to find relevant ones by keyword. "
+            "Discovered tools become directly callable on the next turn — do not wrap them."
+        )
+
     def _build_registry(self, tools: List[Union[Toolkit, Callable, Function]]) -> None:
         for tool in tools:
             if isinstance(tool, Toolkit):

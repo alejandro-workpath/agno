@@ -62,28 +62,31 @@ def test_registry_built_from_toolkit():
     assert "send_email" in dt._registry
 
 
-def test_get_tools_returns_search_meta_only(dt):
-    tools = dt.get_tools()
-    assert len(tools) == 1
-    assert tools[0].name == "search_tools"
-    assert tools[0].entrypoint == dt._search
+def test_toolkit_registers_search_meta_only(dt):
+    # DiscoverableTools is a Toolkit — inherits get_functions() from parent.
+    # It should register exactly the search_tools meta-Function.
+    assert list(dt.functions.keys()) == ["search_tools"]
+    assert dt.functions["search_tools"].entrypoint == dt._search
 
 
-def test_get_tools_resets_active_names(dt):
+def test_bind_resets_active_names(dt):
     dt._active_names.add("send_email")
-    dt.get_tools()
+    dt.bind(tools_list=[])
     assert dt._active_names == set()
 
 
-def test_system_prompt_snippet_mentions_count(dt):
-    snippet = dt.get_system_prompt_snippet()
-    assert "4 additional tools" in snippet
-    assert "search_tools" in snippet
+def test_toolkit_instructions_include_count(dt):
+    # Toolkit's `instructions` (auto-injected via add_instructions=True)
+    # replaces the old get_system_prompt_snippet method.
+    assert dt.instructions is not None
+    assert "4 additional tools" in dt.instructions
+    assert "search_tools" in dt.instructions
+    assert dt.add_instructions is True
 
 
-def test_system_prompt_snippet_empty_when_no_registry():
+def test_toolkit_instructions_empty_when_no_registry():
     dt = DiscoverableTools(tools=[])
-    assert dt.get_system_prompt_snippet() == ""
+    assert dt.instructions == ""
 
 
 def test_search_returns_word_matches(dt):
@@ -236,6 +239,29 @@ def test_discovered_function_gets_run_context_and_media(dt):
     injected = fake_list[0]
     assert injected._run_context is dummy_ctx
     assert injected._images is dummy_images
+
+
+def test_agent_accepts_discoverable_tools_inside_tools_list():
+    """DX check: DiscoverableTools slots into the existing tools= param (Toolkit pattern)."""
+    from agno.agent import Agent
+
+    def upfront_tool() -> str:
+        """Always visible."""
+        return "upfront"
+
+    def deferred_tool() -> str:
+        """Discoverable."""
+        return "deferred"
+
+    discoverable = DiscoverableTools(tools=[deferred_tool])
+    agent = Agent(tools=[upfront_tool, discoverable])
+
+    # Both the upfront callable and the DiscoverableTools toolkit survive as tools
+    assert agent.tools is not None
+    assert any(t is discoverable for t in agent.tools)
+    # Registry still holds deferred tool; it is NOT in agent.tools as a top-level entry
+    assert "deferred_tool" in discoverable._sync_registry
+    assert not any(callable(t) and getattr(t, "__name__", None) == "deferred_tool" for t in agent.tools)
 
 
 def test_registry_exposes_media_needs_for_host_detection():

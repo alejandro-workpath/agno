@@ -317,12 +317,6 @@ def _build_trailing_sections(
         if skills_snippet:
             content += f"\n{skills_snippet}\n"
 
-    # Add discoverable tools availability snippet
-    if team.discoverable_tools is not None:
-        dt_snippet = team.discoverable_tools.get_system_prompt_snippet()
-        if dt_snippet:
-            content += f"\n{dt_snippet}\n"
-
     if add_session_state_to_context and session_state is not None:
         content += _get_formatted_session_state_for_system_message(team, session_state)
 

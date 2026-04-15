@@ -61,22 +61,23 @@ def translate_text(text: str, target_language: str) -> str:
 # ---------------------------------------------------------------------------
 # Only `get_weather` is always visible. The other 7 tools are discoverable —
 # the agent must call search_tools(query) to find and activate them.
+discoverable = DiscoverableTools(
+    tools=[
+        get_stock_price,
+        send_email,
+        search_contacts,
+        list_calendar_events,
+        create_jira_ticket,
+        query_database,
+        translate_text,
+    ],
+    max_results=3,
+)
+
 agent = Agent(
     name="Productivity Assistant",
     model=OpenAIResponses(id="gpt-5.4"),
-    tools=[get_weather],
-    discoverable_tools=DiscoverableTools(
-        tools=[
-            get_stock_price,
-            send_email,
-            search_contacts,
-            list_calendar_events,
-            create_jira_ticket,
-            query_database,
-            translate_text,
-        ],
-        max_results=3,
-    ),
+    tools=[get_weather, discoverable],
     instructions=[
         "You MUST use tools to perform actions, never just describe them.",
         "When a capability is missing from your visible tools, call search_tools(query) FIRST.",

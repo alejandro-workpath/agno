@@ -226,10 +226,6 @@ def _determine_tools_for_model(
     if team.skills is not None:
         _tools.extend(team.skills.get_tools())
 
-    # Add search_tools meta-tool for discoverable tools
-    if team.discoverable_tools is not None:
-        _tools.extend(team.discoverable_tools.get_tools())
-
     from agno.team.mode import TeamMode
 
     if team.mode == TeamMode.tasks:
@@ -393,9 +389,13 @@ def _determine_tools_for_model(
             except Exception as e:
                 log_warning(f"Could not add tool {tool}: {str(e)}")
 
+    from agno.tools.discoverable import DiscoverableTools
+
+    discoverables = [t for t in _tools if isinstance(t, DiscoverableTools)]
+
     joint_images = joint_files = joint_audios = joint_videos = None
 
-    if _functions or team.discoverable_tools is not None:
+    if _functions or discoverables:
         from inspect import signature
 
         def _func_needs_media(func: Function) -> bool:
@@ -406,8 +406,8 @@ def _determine_tools_for_model(
 
         # Scan upfront tools + discoverable pool — either may need media at runtime
         needs_media = any(_func_needs_media(f) for f in _functions if isinstance(f, Function))
-        if not needs_media and team.discoverable_tools is not None:
-            needs_media = any(_func_needs_media(f) for f in team.discoverable_tools._sync_registry.values())
+        if not needs_media and discoverables:
+            needs_media = any(_func_needs_media(f) for dt in discoverables for f in dt._sync_registry.values())
 
         # Only collect media if functions actually need them
         if needs_media:
@@ -424,9 +424,9 @@ def _determine_tools_for_model(
                 func._audios = joint_audios
                 func._videos = joint_videos
 
-    # Wire DiscoverableTools to the live tools list so search_tools can inject mid-run
-    if team.discoverable_tools is not None:
-        team.discoverable_tools.bind(
+    # Wire each DiscoverableTools in the tools list to the live _functions list
+    for dt in discoverables:
+        dt.bind(
             tools_list=_functions,
             team=team,
             strict=should_use_strict_mode(

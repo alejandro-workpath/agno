@@ -79,22 +79,23 @@ def translate_text(text: str, target_language: str) -> str:
     return f"Translated {len(text)} chars to {target_language}"
 
 
+discoverable = DiscoverableTools(
+    tools=[
+        get_stock_price,
+        send_email,
+        search_contacts,
+        list_calendar_events,
+        create_jira_ticket,
+        query_database,
+        translate_text,
+    ],
+    max_results=3,
+)
+
 agent = Agent(
     name="Productivity Assistant",
     model=OpenAIResponses(id="gpt-5.4"),
-    tools=[get_weather],
-    discoverable_tools=DiscoverableTools(
-        tools=[
-            get_stock_price,
-            send_email,
-            search_contacts,
-            list_calendar_events,
-            create_jira_ticket,
-            query_database,
-            translate_text,
-        ],
-        max_results=3,
-    ),
+    tools=[get_weather, discoverable],
     instructions=[
         "You MUST use tools to perform actions, never just describe them.",
         "When a capability is missing from your visible tools, call search_tools(query) FIRST.",

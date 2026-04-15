@@ -202,10 +202,6 @@ def get_tools(
     if agent.skills is not None:
         agent_tools.extend(agent.skills.get_tools())
 
-    # Add search_tools meta-tool for discoverable tools
-    if agent.discoverable_tools is not None:
-        agent_tools.extend(agent.discoverable_tools.get_tools())
-
     return agent_tools
 
 
@@ -337,10 +333,6 @@ async def aget_tools(
     # Add tools for accessing skills
     if agent.skills is not None:
         agent_tools.extend(agent.skills.get_tools())
-
-    # Add search_tools meta-tool for discoverable tools
-    if agent.discoverable_tools is not None:
-        agent_tools.extend(agent.discoverable_tools.get_tools())
 
     return agent_tools
 
@@ -493,10 +485,16 @@ def determine_tools_for_model(
             agent, tools=processed_tools, model=model, run_context=run_context, async_mode=async_mode
         )
 
+    # DiscoverableTools instances in the tools list need bind() after parse_tools
+    # so their search_tools meta-Function can mutate _functions mid-run
+    from agno.tools.discoverable import DiscoverableTools
+
+    discoverables = [t for t in (processed_tools or []) if isinstance(t, DiscoverableTools)]
+
     joint_images = joint_files = joint_audios = joint_videos = None
 
     # Update the session state for the functions
-    if _functions or agent.discoverable_tools is not None:
+    if _functions or discoverables:
         from inspect import signature
 
         def _func_needs_media(func: Function) -> bool:
@@ -507,8 +505,8 @@ def determine_tools_for_model(
 
         # Scan upfront tools + discoverable pool — either may need media at runtime
         needs_media = any(_func_needs_media(f) for f in _functions if isinstance(f, Function))
-        if not needs_media and agent.discoverable_tools is not None:
-            needs_media = any(_func_needs_media(f) for f in agent.discoverable_tools._sync_registry.values())
+        if not needs_media and discoverables:
+            needs_media = any(_func_needs_media(f) for dt in discoverables for f in dt._sync_registry.values())
 
         # Only collect media if functions actually need them
         if needs_media:
@@ -525,9 +523,9 @@ def determine_tools_for_model(
                 func._audios = joint_audios
                 func._videos = joint_videos
 
-    # Wire DiscoverableTools to the live tools list so search_tools can inject mid-run
-    if agent.discoverable_tools is not None:
-        agent.discoverable_tools.bind(
+    # Wire each DiscoverableTools in the tools list to the live _functions list
+    for dt in discoverables:
+        dt.bind(
             tools_list=_functions,
             agent=agent,
             team=agent._team,
