@@ -134,10 +134,15 @@ class DiscoverableTools:
                 approval_type = getattr(tool, "_agno_approval_type", None)
                 if approval_type is not None:
                     func.approval_type = approval_type
-                    if approval_type == "required" and not any(
-                        [func.requires_user_input, func.requires_confirmation, func.external_execution]
-                    ):
+                    has_hitl = any([func.requires_user_input, func.requires_confirmation, func.external_execution])
+                    if approval_type == "required" and not has_hitl:
                         func.requires_confirmation = True
+                    elif approval_type == "audit" and not has_hitl:
+                        raise ValueError(
+                            "@approval(type='audit') requires at least one HITL flag "
+                            "('requires_confirmation', 'requires_user_input', or 'external_execution') "
+                            "to be set on @tool()."
+                        )
                 self._register_both(func.name, func)
             else:
                 log_warning(f"DiscoverableTools: unsupported tool type {type(tool).__name__}")

@@ -187,6 +187,19 @@ def test_approval_sentinel_preserved_on_callable():
     assert func.requires_confirmation is True
 
 
+def test_audit_approval_without_hitl_flag_raises():
+    """Mirror parse_tools invariant: @approval(type='audit') needs at least one HITL flag."""
+
+    def audited_action(target: str) -> str:
+        """Perform an audited action."""
+        return f"logged {target}"
+
+    audited_action._agno_approval_type = "audit"  # type: ignore[attr-defined]
+
+    with pytest.raises(ValueError, match="audit.*HITL"):
+        DiscoverableTools(tools=[audited_action])
+
+
 def test_function_object_input_registers_in_both_registries():
     """A plain Function passed in should appear in sync + async registries."""
     func = Function(name="plain", description="Plain function.", entrypoint=lambda: "ok")
