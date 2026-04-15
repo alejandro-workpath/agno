@@ -223,3 +223,25 @@ def test_discovered_function_gets_run_context_and_media(dt):
     injected = fake_list[0]
     assert injected._run_context is dummy_ctx
     assert injected._images is dummy_images
+
+
+def test_registry_exposes_media_needs_for_host_detection():
+    """Host (Agent/Team) must be able to introspect discoverable pool for media params.
+
+    Regression: codex review flagged that needs_media was computed only from upfront
+    tools. If the only media-using tool lives in the discoverable pool, the host must
+    still collect joint media at run start so the discovered Function sees it.
+    """
+    from inspect import signature
+
+    def image_analyzer(images: list) -> str:
+        """Analyze images."""
+        return "analyzed"
+
+    dt = DiscoverableTools(tools=[image_analyzer])
+    has_media_tool = any(
+        func.entrypoint is not None
+        and any(p in signature(func.entrypoint).parameters for p in ("images", "videos", "audios", "files"))
+        for func in dt._sync_registry.values()
+    )
+    assert has_media_tool is True

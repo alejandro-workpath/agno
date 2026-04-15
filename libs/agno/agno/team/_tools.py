@@ -395,15 +395,19 @@ def _determine_tools_for_model(
 
     joint_images = joint_files = joint_audios = joint_videos = None
 
-    if _functions:
+    if _functions or team.discoverable_tools is not None:
         from inspect import signature
 
-        # Check if any functions need media before collecting
-        needs_media = any(
-            any(param in signature(func.entrypoint).parameters for param in ["images", "videos", "audios", "files"])
-            for func in _functions
-            if isinstance(func, Function) and func.entrypoint is not None
-        )
+        def _func_needs_media(func: Function) -> bool:
+            if func.entrypoint is None:
+                return False
+            params = signature(func.entrypoint).parameters
+            return any(p in params for p in ("images", "videos", "audios", "files"))
+
+        # Scan upfront tools + discoverable pool — either may need media at runtime
+        needs_media = any(_func_needs_media(f) for f in _functions if isinstance(f, Function))
+        if not needs_media and team.discoverable_tools is not None:
+            needs_media = any(_func_needs_media(f) for f in team.discoverable_tools._sync_registry.values())
 
         # Only collect media if functions actually need them
         if needs_media:
