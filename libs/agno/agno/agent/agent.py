@@ -60,6 +60,7 @@ from agno.session import AgentSession, SessionSummaryManager, TeamSession, Workf
 from agno.session.summary import SessionSummary
 from agno.skills import Skills
 from agno.tools import Toolkit
+from agno.tools.discoverable import DiscoverableTools
 from agno.tools.function import Function
 from agno.utils.log import log_warning
 from agno.utils.safe_formatter import SafeFormatter
@@ -158,6 +159,11 @@ class Agent:
     # --- Skills ---
     # Skills provide structured instructions, reference docs, and scripts for agents
     skills: Optional[Skills] = None
+
+    # --- Discoverable Tools ---
+    # Tools withheld from context until discovered via search_tools meta-tool.
+    # Use to scale tool catalogs without paying full context cost upfront.
+    discoverable_tools: Optional[DiscoverableTools] = None
 
     # --- Agent Tools ---
     # A list of tools provided to the Model.
@@ -421,6 +427,7 @@ class Agent:
         knowledge_retriever: Optional[Callable[..., Optional[List[Union[Dict, str]]]]] = None,
         references_format: Literal["json", "yaml"] = "json",
         skills: Optional[Skills] = None,
+        discoverable_tools: Optional[DiscoverableTools] = None,
         metadata: Optional[Dict[str, Any]] = None,
         tools: Optional[Union[Sequence[Union[Toolkit, Callable, Function, Dict]], Callable[..., List]]] = None,
         tool_call_limit: Optional[int] = None,
@@ -576,6 +583,7 @@ class Agent:
         self.references_format = references_format
 
         self.skills = skills
+        self.discoverable_tools = discoverable_tools
 
         self.metadata = metadata
 

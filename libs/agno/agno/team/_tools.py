@@ -226,6 +226,10 @@ def _determine_tools_for_model(
     if team.skills is not None:
         _tools.extend(team.skills.get_tools())
 
+    # Add search_tools meta-tool for discoverable tools
+    if team.discoverable_tools is not None:
+        _tools.extend(team.discoverable_tools.get_tools())
+
     from agno.team.mode import TeamMode
 
     if team.mode == TeamMode.tasks:
@@ -306,13 +310,14 @@ def _determine_tools_for_model(
     _functions: List[Union[Function, dict]] = []
     team._tool_instructions = []
 
-    # Get output_schema from run_context
-    output_schema = run_context.output_schema if run_context else None
+    from agno.agent._tools import should_use_strict_mode
 
-    # Check if we need strict mode for the model
-    strict = False
-    if output_schema is not None and not team.use_json_mode and model.supports_native_structured_outputs:
-        strict = True
+    strict = should_use_strict_mode(
+        model=model,
+        use_json_mode=team.use_json_mode,
+        structured_outputs=None,
+        run_context=run_context,
+    )
 
     for tool in _tools:
         if isinstance(tool, Dict):
@@ -388,6 +393,8 @@ def _determine_tools_for_model(
             except Exception as e:
                 log_warning(f"Could not add tool {tool}: {str(e)}")
 
+    joint_images = joint_files = joint_audios = joint_videos = None
+
     if _functions:
         from inspect import signature
 
@@ -399,10 +406,11 @@ def _determine_tools_for_model(
         )
 
         # Only collect media if functions actually need them
-        joint_images = collect_joint_images(run_response.input, session) if needs_media else None  # type: ignore
-        joint_files = collect_joint_files(run_response.input) if needs_media else None  # type: ignore
-        joint_audios = collect_joint_audios(run_response.input, session) if needs_media else None  # type: ignore
-        joint_videos = collect_joint_videos(run_response.input, session) if needs_media else None  # type: ignore
+        if needs_media:
+            joint_images = collect_joint_images(run_response.input, session)  # type: ignore
+            joint_files = collect_joint_files(run_response.input)  # type: ignore
+            joint_audios = collect_joint_audios(run_response.input, session)  # type: ignore
+            joint_videos = collect_joint_videos(run_response.input, session)  # type: ignore
 
         for func in _functions:  # type: ignore
             if isinstance(func, Function):
@@ -411,6 +419,26 @@ def _determine_tools_for_model(
                 func._files = joint_files
                 func._audios = joint_audios
                 func._videos = joint_videos
+
+    # Wire DiscoverableTools to the live tools list so search_tools can inject mid-run
+    if team.discoverable_tools is not None:
+        team.discoverable_tools.bind(
+            tools_list=_functions,
+            team=team,
+            strict=should_use_strict_mode(
+                model=model,
+                use_json_mode=team.use_json_mode,
+                structured_outputs=None,
+                run_context=run_context,
+            ),
+            tool_hooks=team.tool_hooks,
+            run_context=run_context,
+            images=joint_images,
+            files=joint_files,
+            audios=joint_audios,
+            videos=joint_videos,
+            async_mode=async_mode,
+        )
 
     return _functions
 

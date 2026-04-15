@@ -45,6 +45,7 @@ from agno.run.team import (
 from agno.session import SessionSummaryManager, TeamSession
 from agno.skills import Skills
 from agno.tools import Toolkit
+from agno.tools.discoverable import DiscoverableTools
 from agno.tools.function import Function
 from agno.utils.log import (
     log_debug,
@@ -129,6 +130,7 @@ def __init__(
     num_history_messages: Optional[int] = None,
     max_tool_calls_from_history: Optional[int] = None,
     skills: Optional[Skills] = None,
+    discoverable_tools: Optional[DiscoverableTools] = None,
     tools: Optional[Union[List[Union[Toolkit, Callable, Function, Dict]], Callable[..., List]]] = None,
     tool_call_limit: Optional[int] = None,
     tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
@@ -302,6 +304,7 @@ def __init__(
     team.send_media_to_model = send_media_to_model
 
     team.skills = skills
+    team.discoverable_tools = discoverable_tools
 
     if tools is None:
         team.tools = None

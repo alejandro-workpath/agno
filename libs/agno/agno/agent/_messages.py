@@ -283,6 +283,11 @@ def get_system_message(
         skills_snippet = agent.skills.get_system_prompt_snippet()
         if skills_snippet:
             system_message_content += f"\n{skills_snippet}\n"
+    # 3.3.8.2 Then add discoverable tools availability snippet
+    if agent.discoverable_tools is not None:
+        dt_snippet = agent.discoverable_tools.get_system_prompt_snippet()
+        if dt_snippet:
+            system_message_content += f"\n{dt_snippet}\n"
     # 3.3.9 Then add memories to the system prompt
     if agent.add_memories_to_context:
         _memory_manager_not_set = False
@@ -631,6 +636,11 @@ async def aget_system_message(
         skills_snippet = agent.skills.get_system_prompt_snippet()
         if skills_snippet:
             system_message_content += f"\n{skills_snippet}\n"
+    # 3.3.8.2 Then add discoverable tools availability snippet
+    if agent.discoverable_tools is not None:
+        dt_snippet = agent.discoverable_tools.get_system_prompt_snippet()
+        if dt_snippet:
+            system_message_content += f"\n{dt_snippet}\n"
     # 3.3.9 Then add memories to the system prompt
     if agent.add_memories_to_context:
         _memory_manager_not_set = False
