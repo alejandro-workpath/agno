@@ -407,7 +407,11 @@ def _determine_tools_for_model(
         # Scan upfront tools + discoverable pool — either may need media at runtime
         needs_media = any(_func_needs_media(f) for f in _functions if isinstance(f, Function))
         if not needs_media and discoverables:
-            needs_media = any(_func_needs_media(f) for dt in discoverables for f in dt._sync_registry.values())
+            needs_media = any(
+                _func_needs_media(f)
+                for dt in discoverables
+                for f in (dt._async_registry if async_mode else dt._sync_registry).values()
+            )
 
         # Only collect media if functions actually need them
         if needs_media:

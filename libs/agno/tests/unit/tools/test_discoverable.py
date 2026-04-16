@@ -265,12 +265,7 @@ def test_agent_accepts_discoverable_tools_inside_tools_list():
 
 
 def test_registry_exposes_media_needs_for_host_detection():
-    """Host (Agent/Team) must be able to introspect discoverable pool for media params.
-
-    Regression: codex review flagged that needs_media was computed only from upfront
-    tools. If the only media-using tool lives in the discoverable pool, the host must
-    still collect joint media at run start so the discovered Function sees it.
-    """
+    """Host (Agent/Team) must be able to introspect discoverable pool for media params."""
     from inspect import signature
 
     def image_analyzer(images: list) -> str:
@@ -284,3 +279,42 @@ def test_registry_exposes_media_needs_for_host_detection():
         for func in dt._sync_registry.values()
     )
     assert has_media_tool is True
+
+
+def test_async_registry_media_detection():
+    """Async-only toolkit media tools must be visible via _async_registry."""
+    from inspect import signature
+
+    async def async_image_tool(images: list) -> str:
+        """Async image processor."""
+        return "processed"
+
+    class AsyncMediaKit(Toolkit):
+        def __init__(self):
+            super().__init__(name="async_media", tools=[async_image_tool])
+
+    dt = DiscoverableTools(tools=[AsyncMediaKit()])
+    has_media_in_async = any(
+        func.entrypoint is not None
+        and any(p in signature(func.entrypoint).parameters for p in ("images", "videos", "audios", "files"))
+        for func in dt._async_registry.values()
+    )
+    assert has_media_in_async is True
+
+
+def test_inject_skips_duplicate_names():
+    """Discovered tool with same name as already-visible tool must not override it."""
+
+    def send_email(to: str) -> str:
+        """Send email."""
+        return f"sent to {to}"
+
+    dt = DiscoverableTools(tools=[send_email])
+    # Simulate an already-visible tool with same name
+    existing = Function(name="send_email", description="Existing.", entrypoint=lambda: "original")
+    fake_list = [existing]
+    dt.bind(tools_list=fake_list)
+    dt._search("email")
+    # Should NOT have appended a duplicate
+    assert len(fake_list) == 1
+    assert fake_list[0] is existing

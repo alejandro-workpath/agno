@@ -204,6 +204,11 @@ class DiscoverableTools(Toolkit):
         if self._tools_list_ref is None:
             log_warning("DiscoverableTools: tools list not bound; cannot inject")
             return
+        # Prevent name collisions with already-visible tools or prior injections
+        existing_names = {t.name for t in self._tools_list_ref if isinstance(t, Function)}
+        if func.name in existing_names:
+            log_debug(f"DiscoverableTools: skipping {func.name} (name already in tools list)")
+            return
         copied = func.model_copy(deep=True)
         copied._agent = self._agent
         copied._team = self._team
